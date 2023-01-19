@@ -42,7 +42,7 @@ def sitemap():
 
 # [GET] /people
 @app.route('/people', methods=['GET'])
-def handle_hello():
+def handle_people():
     people_query = Character.query.all()
     people_list = list(map(lambda x: x.serialize(), people_query))
 
@@ -143,7 +143,7 @@ def get_favs_each_user(user_id):
 def post_fav(user_id):
     body = request.get_json()
     if body["type"].lower() == "character":
-        fav = FavCharacter(type_fav=body["type"], userID=body['userID'], characterID=body['characterID'], charname= body['charname'])
+        fav = FavCharacter(type_fav=body["type"], user_id=body['user_id'], character_id=body['character_id'], name= body['name'])
         db.session.add(fav)
         db.session.commit()
 
@@ -151,7 +151,7 @@ def post_fav(user_id):
             "state": "character + 1"
     }
     elif body["type"].lower() == "planet":
-        fav = FavPlanet(type_fav=body["type"], userID=body['userID'], planetID=body['planetID'], planame= body['planame'])
+        fav = FavPlanet(type_fav=body["type"], user_id=body['user_id'], planet_id=body['planet_id'], name= body['name'])
         db.session.add(fav)
         db.session.commit()
 
