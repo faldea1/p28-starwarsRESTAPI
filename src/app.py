@@ -3,6 +3,7 @@ This module takes care of starting the API Server, Loading the DB and Adding the
 """
 import os
 from flask import Flask, request, jsonify, url_for
+import json
 from flask_migrate import Migrate
 from flask_swagger import swagger
 from flask_cors import CORS
@@ -46,7 +47,7 @@ def handle_hello():
     people_list = list(map(lambda x: x.serialize(), people_query))
 
     response_body = {
-        "msg": "Hello, this is your [GET] /people response ",
+        "msg": "Hello, this is your #[GET] /people response ",
         "characters": people_list
     }
 
@@ -60,7 +61,7 @@ def get_character():
     print(character)
 
     response_body = {
-        "msg": "Hello, this is your [GET] /people/<int:people_id> response ",
+        "msg": "Hello, this is your #[GET] /people/<int:people_id> response ",
         "character": character
     }
 
@@ -75,7 +76,7 @@ def get_planets():
     print(planets_query)
 
     response_body = {
-        "msg": "Hello, this is your [GET] /planets response ",
+        "msg": "Hello, this is your #[GET] /planets response ",
         "planets": planets_query
     }
 
@@ -83,16 +84,16 @@ def get_planets():
 
 
 # [GET] /planets/<int:planet_id>
-@app.route('/planet/<int:id>', methods=['GET'])
+@app.route('/planets/<int:id>', methods=['GET'])
 def get_planet():
     planet = Planet.query.get(id)
     if planet is None:
-        return "No register of planet", 404
+        return "No planet found", 404
     planet = planet.serialize()
     print(planet)
 
     response_body = {
-        "msg": "Hello, this is your [GET] /planet/<int:planet_id> response ",
+        "msg": "Hello, this is your #[GET] /planets/<int:planet_id> response ",
         "planet": planet
     }
 
@@ -114,41 +115,82 @@ def get_users():
     return jsonify(response_body), 200
 
 
+#[GET] /users/favorites 
+@app.route('/users/<int:user_id>/favorites', methods=['GET'])
+def get_favs_each_user(user_id):
+    user_query = User.query.get(user_id)
+
+    user_characters = user_query.favorites()['characters']
+    user_planets = user_query.favorites()['planets']
+
+    user_characters = list(map(lambda x: x.serialize(), user_characters))
+    user_planets = list(map(lambda x: x.serialize(), user_planets))
+
+    if user_query is None:
+        return 'No favs found, pick some!', 404
+
+    response_body = {
+        "msg": "Hello, this is your #[GET] /users/favorites ",
+        "fav_characters": user_characters,
+        "fav_planets": user_planets
+    }
+
+    return jsonify(response_body), 200
 
 
+#[POST] /users/favorites 
+@app.route('/users/<int:user_id>/favorites', methods=['POST'])
+def post_fav(user_id):
+    body = request.get_json()
+    if body["type"].lower() == "character":
+        fav = FavCharacter(type_fav=body["type"], userID=body['userID'], characterID=body['characterID'], charname= body['charname'])
+        db.session.add(fav)
+        db.session.commit()
+
+        response_body = {
+            "state": "character + 1"
+    }
+    elif body["type"].lower() == "planet":
+        fav = FavPlanet(type_fav=body["type"], userID=body['userID'], planetID=body['planetID'], planame= body['planame'])
+        db.session.add(fav)
+        db.session.commit()
+
+        response_body = {
+            "state": "planet + 1"
+    }
+
+    return jsonify('registering favs'), 200
 
 
+#[DELETE] /users/favorites 
+@app.route('/users/<int:user_id>/favorites', methods=['DELETE'])
+def delete_fav(user_id):
+    user_query = User.query.get(user_id)
+    character_id = request.json.get('character_id')
+    planet_id = request.json.get('planet_id')
 
+    if not character_id and not planet_id:
+        return "nothing to delete"
 
+    if character_id:
+        char = FavCharacter.query.filter_by(userID=user_id, characterID=character_id).first()
+        db.session.delete(char)
+        db.session.commit()
 
+        print(char)
 
+        return 'char deleted', 200
 
+    if planet_id:
+        pla = FavPlanet.query.filter_by(userID=user_id, planetID=planet_id).first()
+        db.session.delete(pla)
+        db.session.commit()
 
+        print(pla)
 
+        return "pla deleted", 200
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return jsonify ('favs deleted'), 200
 
 
 
